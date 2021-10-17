@@ -1,3 +1,6 @@
+import matrix as matrix
+
+
 class QRplacement():
     def __init__(self, version, correction_type, size, message):
         self.version = version
@@ -53,6 +56,8 @@ class QRplacement():
 
         self.matrix = [[self.none_mark for i in range(self.size)] for j in range(self.size)]
 
+        self.reserved_matrix = None
+
     def add_finder_pattern(self, local_matrix, position):
         for y in range(7):
             for x in range(7):
@@ -84,7 +89,7 @@ class QRplacement():
         if self.version == 1:
             return local_matrix
         for entry in self.alignment_pattern_location_table:
-            if self.version == entry[0]:
+            if int(self.version) == int(entry[0]):
                 pos_log = entry[1:]
                 all_poses = []
                 for point_a in pos_log:
@@ -156,6 +161,8 @@ class QRplacement():
 
         free_matrix = []
 
+
+
         for x in range(self.size - 1, -1, -1):
             local_line = []
             for y in range(self.size - 1, -1, -1):
@@ -163,6 +170,7 @@ class QRplacement():
                     local_line.append([y, x])
             if len(local_line) > 0:
                 free_matrix.append(local_line)
+
 
         free_matrix_inverted = []
 
@@ -218,29 +226,30 @@ class QRplacement():
                         try:
                             zig_zag.append(second_line[cell - first_addition])
                         except Exception:
-                            print("nie działa :(")
+                            pass
 
                         zig_zag.append(first_line[cell])
                     else:
                         try:
                             zig_zag.append(first_line[cell - second_addition])
                         except Exception:
-                            print("nie działa :(")
+                            pass
 
                         zig_zag.append(second_line[cell])
-                        print(f'second error on {second_line[cell]}')  # {first_line[cell-5]}')
+
 
             message_coords.append(zig_zag)
         message_coords = list([j for sub in message_coords for j in sub])
-        # print(message_coords)
         for coord in range(len(message_coords)):
-            if self.final_message[coord] == '1':
-                character = self.black_mark
-            else:
-                character = self.white_mark
+            try: # DONT WORK
+                if self.final_message[coord] == '1':
+                    character = self.black_mark
+                else:
+                    character = self.white_mark
 
-            local_matrix[message_coords[coord][0]][message_coords[coord][1]] = character
-
+                local_matrix[message_coords[coord][0]][message_coords[coord][1]] = character
+            except:
+                pass
         return local_matrix
 
     def choose_mask(self, local_matrix):
@@ -283,13 +292,13 @@ class QRplacement():
                 last_bit = current_bit
             score_1 += x_penalty
         ##########################################
-        print(score_1)
+        #print(score_1)
         ############# EVALUATION 2 ################
 
         ##########################################
         return mask_id
 
-    def add_mask(self, local_matrix, mask_id):
+    def add_mask(self, local_matrix, reserved_matrix, mask_id):
         masks = [lambda _x, _y: (_x + _y) % 2 == 0,
                  lambda _x, _y: _y % 2 == 0,
                  lambda _x, _y: _x % 3 == 0,
@@ -301,21 +310,12 @@ class QRplacement():
 
         for y in range(self.size):
             for x in range(self.size):
-
-                ###only for debug ##
-                if local_matrix[y][x] == self.none_mark:
-                    if masks[mask_id](x, y):
-                        local_matrix[y][x] = self.black_mark
-                    else:
-                        local_matrix[y][x] = self.white_mark
-                ####################
-
-                '''if masks[mask_id](x, y):
-                    if local_matrix[y][x] == self.black_mark:
-                        local_matrix[y][x] = self.white_mark
-                    else:
-                        local_matrix[y][x] = self.black_mark'''
-
+                if masks[mask_id](x, y):
+                    if reserved_matrix[y][x] == self.none_mark:
+                        if local_matrix[y][x] == self.black_mark:
+                            local_matrix[y][x] = self.white_mark
+                        else:
+                            local_matrix[y][x] = self.black_mark
         return local_matrix
 
     def add_format_string(self, local_matrix, mask_id):
@@ -436,11 +436,12 @@ class QRplacement():
         self.matrix = self.add_timing_pattern(self.matrix)
         self.matrix[self.size - 8][8] = self.black_mark  # dark module
         self.matrix = self.add_reserved_area(self.matrix)
+        self.reserved_matrix = list(map(list, self.matrix))
         self.matrix = self.add_data_bits(self.matrix)  # not working correctly
         mask_id = self.choose_mask(self.matrix)
-        self.matrix = self.add_mask(self.matrix, mask_id)
+        self.matrix = self.add_mask(self.matrix, self.reserved_matrix, mask_id)
         self.matrix = self.add_format_string(self.matrix, mask_id)
-        #self.matrix = self.add_version_format(self.matrix)  # not started yet
+        #self.matrix = self.add_version_format(self.matrix)  # to do
 
         return self.matrix
 
