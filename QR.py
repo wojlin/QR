@@ -37,7 +37,7 @@ class QR_code:
 
         ################ QR MATRIX GENERATION #################
         QRgenerator = QRplacement(version, correction_type, size, final_message)
-        self.module_matrix = QRgenerator.generateVisualMatrix()
+        self.module_matrix, mask_id = QRgenerator.generateVisualMatrix()
         self.output_matrix = QRgenerator.generateBinaryMatrix()
         ########################################################
 
@@ -61,7 +61,8 @@ class QR_code:
                              "broken_codewords": broken_codewords,
                              "error_numbers": error_numbers,
                              "ec_codewords": ec_codewords,
-                             "final_message": final_message
+                             "final_message": final_message,
+                             "mask_id": mask_id
                              }
 
     def print_matrix(self, binary):
@@ -91,6 +92,7 @@ class QR_code:
         print(f'error correction numbers: {self.complex_info["error_numbers"]}')
         print(f'error correction codewords: {self.complex_info["ec_codewords"]}')
         print(f'final message: {self.complex_info["final_message"]}')
+        print(f'mask id: {self.complex_info["mask_id"]}')
         print(f'module matrix:')
         print('')
         self.print_matrix(False)
@@ -106,4 +108,14 @@ class QR_code:
         print('')
 
     def SaveToFile(self, filepath, scale, dpi, block_color, background_color):
+        '''
+        save qr code to bmp file
+        _________________________
+        usage: SaveToFile(@filename, @resolution, @dpi, @block color, @background color):
+        @filename                        <str>
+        @resolution (px)                 <int>
+        @dpi (inches per meter)          <int>
+        @block color (r, g, b, a)        <tuple>
+        @background color (r, g, b, a)   <tuple>
+        '''
         GenerateBMP(self.output_matrix, filepath, scale, dpi, block_color, background_color)

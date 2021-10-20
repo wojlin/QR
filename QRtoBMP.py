@@ -1,7 +1,7 @@
 class GenerateBMP():
     def __init__(self, matrix, filepath, scale, dpi, block_color, background_color):
-        self.checkInput(filepath, scale, dpi, block_color, background_color)
-
+        self.checkInput(matrix, filepath, scale, dpi, block_color, background_color)
+        scale = scale // len(matrix)
         size = len(matrix) * scale
 
         ######################  HEADER  ##########################
@@ -42,11 +42,13 @@ class GenerateBMP():
         self.saveFile(filepath)
 
     @staticmethod
-    def checkInput(filepath, scale, dpi, block_color, background_color):
+    def checkInput(matrix, filepath, scale, dpi, block_color, background_color):
         if filepath[-4:] != '.bmp':
             raise Exception("file extension need to be .bmp")
         if type(scale) != int or scale < 1:
             raise TypeError("scale need to be positive integer")
+        if scale < len(matrix):
+            raise TypeError("resolution need to be higher or equal to qr code size")
         if type(dpi) != int or dpi < 1:
             raise TypeError("dpi need to be positive integer")
         if type(block_color) != tuple or type(background_color) != tuple:

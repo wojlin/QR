@@ -1,6 +1,3 @@
-import matrix as matrix
-
-
 class QRplacement():
     def __init__(self, version, correction_type, size, message):
         self.version = version
@@ -161,8 +158,6 @@ class QRplacement():
 
         free_matrix = []
 
-
-
         for x in range(self.size - 1, -1, -1):
             local_line = []
             for y in range(self.size - 1, -1, -1):
@@ -170,7 +165,6 @@ class QRplacement():
                     local_line.append([y, x])
             if len(local_line) > 0:
                 free_matrix.append(local_line)
-
 
         free_matrix_inverted = []
 
@@ -211,7 +205,7 @@ class QRplacement():
 
             for cell in range(max(line_len)):
                 try:
-                    #print(f'{second_line[cell]}   {first_line[cell]}')
+                    # print(f'{second_line[cell]}   {first_line[cell]}')
                     if first_line[cell + first_addition][0] == second_line[cell + second_addition][0]:
                         zig_zag.append(first_line[cell - second_addition])
                         zig_zag.append(second_line[cell - first_addition])
@@ -237,11 +231,10 @@ class QRplacement():
 
                         zig_zag.append(second_line[cell])
 
-
             message_coords.append(zig_zag)
         message_coords = list([j for sub in message_coords for j in sub])
         for coord in range(len(message_coords)):
-            try: # DONT WORK
+            try:  # DONT WORK
                 if self.final_message[coord] == '1':
                     character = self.black_mark
                 else:
@@ -252,51 +245,154 @@ class QRplacement():
                 pass
         return local_matrix
 
-    def choose_mask(self, local_matrix):
-        mask_id = 0
-        penalty = 0
+    def choose_mask(self, local_matrix, reserved_matrix):
+        penalty = []
+        for mask in range(8):
+            ############# EVALUATION 1 ################
+            local_matrix = self.add_mask([row[:] for row in local_matrix], reserved_matrix, mask)
+            score_1 = 0
+            for y in range(self.size):
+                y_penalty = 0
+                last_bit = local_matrix[y][0]
+                current_in_row = 1
+                for x in range(1, self.size):
+                    current_bit = local_matrix[y][x]
+                    if last_bit == current_bit:
+                        current_in_row += 1
+                    else:
+                        current_in_row = 1
+                    if current_in_row == 5:
+                        y_penalty += 3
+                    if current_in_row > 5:
+                        y_penalty += 1
+                    last_bit = current_bit
+                score_1 += y_penalty
 
-        ############# EVALUATION 1 ################
-        score_1 = 0
-        for y in range(self.size):
-            y_penalty = 0
-            last_bit = local_matrix[y][0]
-            current_in_row = 1
-            for x in range(1, self.size):
-                current_bit = local_matrix[y][x]
-                if last_bit == current_bit:
-                    current_in_row += 1
-                else:
-                    current_in_row = 1
-                if current_in_row == 5:
-                    y_penalty += 3
-                if current_in_row > 5:
-                    y_penalty += 1
-                last_bit = current_bit
-            score_1 += y_penalty
+            for x in range(self.size):
+                x_penalty = 0
+                last_bit = local_matrix[x][0]
+                current_in_col = 1
+                for y in range(1, self.size):
+                    current_bit = local_matrix[y][x]
+                    if last_bit == current_bit:
+                        current_in_col += 1
+                    else:
+                        current_in_col = 1
+                    if current_in_col == 5:
+                        x_penalty += 3
+                    if current_in_col > 5:
+                        x_penalty += 1
+                    last_bit = current_bit
+                score_1 += x_penalty
+            ##########################################
+            ############# EVALUATION 2 ################
+            score_2 = 0
+            for y in range(self.size - 2):
+                for x in range(self.size - 2):
+                    current_mark = local_matrix[y][x]
+                    width = []
+                    for y_loc in range(y, self.size - 1):
+                        for x_loc in range(x, self.size - 1):
+                            if local_matrix[y_loc][x_loc] == current_mark or local_matrix[y_loc][
+                                x_loc] == self.reserved_mark:
+                                pass
+                            else:
+                                width.append(x_loc - x)
+                                break
+                        if len(width) == 0:
+                            break
+                        if width[-1] <= 1:
+                            width.pop()
+                            break
+                        if len(width) > 1:
+                            # print(f"{x,y} {x_loc,y_loc} {min(width)}x{len(width)} rectangle")
+                            # print((min(width) - 1) * (len(width) - 1))
+                            score_2 += 3
+            ##########################################
+            ############# EVALUATION 3 ################
+            score_3 = 0
+            search_pattern = [self.black_mark,
+                              self.white_mark,
+                              self.black_mark,
+                              self.black_mark,
+                              self.black_mark,
+                              self.white_mark,
+                              self.black_mark,
+                              self.white_mark,
+                              self.white_mark,
+                              self.white_mark,
+                              self.white_mark]
 
-        for x in range(self.size):
-            x_penalty = 0
-            last_bit = local_matrix[x][0]
-            current_in_col = 1
-            for y in range(1, self.size):
-                current_bit = local_matrix[y][x]
-                if last_bit == current_bit:
-                    current_in_col += 1
-                else:
-                    current_in_col = 1
-                if current_in_col == 5:
-                    x_penalty += 3
-                if current_in_col > 5:
-                    x_penalty += 1
-                last_bit = current_bit
-            score_1 += x_penalty
-        ##########################################
-        #print(score_1)
-        ############# EVALUATION 2 ################
+            for y in range(self.size - len(search_pattern) + 1):
+                for x in range(self.size - len(search_pattern) + 1):
 
-        ##########################################
-        return mask_id
+                    # x-forward
+                    broken = False
+                    for x_loc in range(len(search_pattern)):
+                        if local_matrix[y][x + x_loc] != search_pattern[x_loc] and local_matrix[y][
+                            x + x_loc] != self.reserved_matrix:
+                            broken = True
+                            break
+                    if not broken:
+                        # print(f"x-forward: {x,y}")
+                        score_3 += 40
+                    #############
+
+                    # x-backward
+                    broken = False
+                    for x_loc in range(len(search_pattern)):
+                        if local_matrix[y][x + x_loc] != search_pattern[len(search_pattern) - 1 - x_loc] and \
+                                local_matrix[y][x + x_loc] != self.reserved_matrix:
+                            broken = True
+                            break
+                    if not broken:
+                        # print(f"x-backward: {x,y}")
+                        score_3 += 40
+                    #############
+
+                    # y-forward
+                    broken = False
+                    for y_loc in range(len(search_pattern)):
+                        if local_matrix[y + y_loc][x] != search_pattern[y_loc] and local_matrix[y + y_loc][
+                            x] != self.reserved_matrix:
+                            broken = True
+                            break
+                    if not broken:
+                        # print(f"y-forward: {x,y}")
+                        score_3 += 40
+                    #############
+
+                    # y-backward
+                    broken = False
+                    for y_loc in range(len(search_pattern)):
+                        if local_matrix[y + y_loc][x] != search_pattern[len(search_pattern) - 1 - y_loc] and \
+                                local_matrix[y + y_loc][x] != self.reserved_matrix:
+                            broken = True
+                            break
+                    if not broken:
+                        # print(f"y-backward: {x,y}")
+                        score_3 += 40
+                    #############
+
+            ###########################################
+            ############# EVALUATION 4 ################
+            score_4 = 0
+            total_modules = self.size * self.size
+            dark_modules = 0
+            for x in range(self.size):
+                for y in range(1, self.size):
+                    if local_matrix[y][x] == self.black_mark:
+                        dark_modules += 1
+            percent = (dark_modules / total_modules) * 100
+            percent_round = [int((percent // 5) * 5), -int((-percent // 5) * 5)]
+            absolute = [abs(percent_round[0] - 50), abs(percent_round[1] - 50)]
+            divide = [int(val / 5) for val in absolute]
+            score_4 = min(divide) * 10
+            ###########################################
+            loc_pen = score_1 + score_2 + score_3 + score_4
+            penalty.append(loc_pen)
+        val, idx = min((val, idx) for (idx, val) in enumerate(penalty))
+        return idx
 
     def add_mask(self, local_matrix, reserved_matrix, mask_id):
         masks = [lambda _x, _y: (_x + _y) % 2 == 0,
@@ -377,45 +473,6 @@ class QRplacement():
                 for c in range(len(entry[2])):
                     encoded_str[c] = int(entry[2][c])
                 break
-        #####
-
-
-        '''[['Version', 'Version Information String'],
-         ['7', '000111110010010100'],
-         ['8', '001000010110111100'],
-         ['9', '001001101010011001'],
-         ['10', '001010010011010011'],
-         ['11', '001011101111110110'],
-         ['12', '001100011101100010'],
-         ['13', '001101100001000111'],
-         ['14', '001110011000001101'],
-         ['15', '001111100100101000'],
-         ['16', '010000101101111000'],
-         ['17', '010001010001011101'],
-         ['18', '010010101000010111'],
-         ['19', '010011010100110010'],
-         ['20', '010100100110100110'],
-         ['21', '010101011010000011'],
-         ['22', '010110100011001001'],
-         ['23', '010111011111101100'],
-         ['24', '011000111011000100'],
-         ['25', '011001000111100001'],
-         ['26', '011010111110101011'],
-         ['27', '011011000010001110'],
-         ['28', '011100110000011010'],
-         ['29', '011101001100111111'],
-         ['30', '011110110101110101'],
-         ['31', '011111001001010000'],
-         ['32', '100000100111010101'],
-         ['33', '100001011011110000'],
-         ['34', '100010100010111010'],
-         ['35', '100011011110011111'],
-         ['36', '100100101100001011'],
-         ['37', '100101010000101110'],
-         ['38', '100110101001100100'],
-         ['39', '100111010101000001'],
-         ['40', '101000110001101001']]
-        '''
 
         # bits placement in matrix
         for i in range(len(encoded_str)):
@@ -424,7 +481,75 @@ class QRplacement():
                     local_matrix[cell[0]][cell[1]] = self.white_mark
                 elif encoded_str[i] == 1:
                     local_matrix[cell[0]][cell[1]] = self.black_mark
+        return local_matrix
 
+    def add_version_format(self, local_matrix):
+        # ['Version', 'Version Information String']
+        format_data = [['7', '000111110010010100'],
+                       ['8', '001000010110111100'],
+                       ['9', '001001101010011001'],
+                       ['10', '001010010011010011'],
+                       ['11', '001011101111110110'],
+                       ['12', '001100011101100010'],
+                       ['13', '001101100001000111'],
+                       ['14', '001110011000001101'],
+                       ['15', '001111100100101000'],
+                       ['16', '010000101101111000'],
+                       ['17', '010001010001011101'],
+                       ['18', '010010101000010111'],
+                       ['19', '010011010100110010'],
+                       ['20', '010100100110100110'],
+                       ['21', '010101011010000011'],
+                       ['22', '010110100011001001'],
+                       ['23', '010111011111101100'],
+                       ['24', '011000111011000100'],
+                       ['25', '011001000111100001'],
+                       ['26', '011010111110101011'],
+                       ['27', '011011000010001110'],
+                       ['28', '011100110000011010'],
+                       ['29', '011101001100111111'],
+                       ['30', '011110110101110101'],
+                       ['31', '011111001001010000'],
+                       ['32', '100000100111010101'],
+                       ['33', '100001011011110000'],
+                       ['34', '100010100010111010'],
+                       ['35', '100011011110011111'],
+                       ['36', '100100101100001011'],
+                       ['37', '100101010000101110'],
+                       ['38', '100110101001100100'],
+                       ['39', '100111010101000001'],
+                       ['40', '101000110001101001']]
+
+        message_coords = [[[0, -11], [-11, 0]],
+                          [[0, -10], [-10, 0]],
+                          [[0, -9], [-9, 0]],
+                          [[1, -11], [-11, 1]],
+                          [[1, -10], [-10, 1]],
+                          [[1, -9], [-9, 1]],
+                          [[2, -11], [-11, 2]],
+                          [[2, -10], [-10, 2]],
+                          [[2, -9], [-9, 2]],
+                          [[3, -11], [-11, 3]],
+                          [[3, -10], [-10, 3]],
+                          [[3, -9], [-9, 3]],
+                          [[4, -11], [-11, 4]],
+                          [[4, -10], [-10, 4]],
+                          [[4, -9], [-9, 4]],
+                          [[5, -11], [-11, 5]],
+                          [[5, -10], [-10, 5]],
+                          [[5, -9], [-9, 5]]]
+        encoded_str = [0] * 18
+        for entry in format_data:
+            if int(entry[0]) == int(self.version):
+                encoded_str = list(entry[1])
+                break
+        # bits placement in matrix
+        for i in range(len(encoded_str)):
+            for cell in message_coords[i]:
+                if int(encoded_str[i]) == 0:
+                    local_matrix[cell[0]][cell[1]] = self.white_mark
+                elif int(encoded_str[i]) == 1:
+                    local_matrix[cell[0]][cell[1]] = self.black_mark
         return local_matrix
 
     def generateVisualMatrix(self):
@@ -437,13 +562,13 @@ class QRplacement():
         self.matrix[self.size - 8][8] = self.black_mark  # dark module
         self.matrix = self.add_reserved_area(self.matrix)
         self.reserved_matrix = list(map(list, self.matrix))
-        self.matrix = self.add_data_bits(self.matrix)  # not working correctly
-        mask_id = self.choose_mask(self.matrix)
+        self.matrix = self.add_data_bits(self.matrix)  # !!!!!!!!!!! not working correctly
+        mask_id = self.choose_mask(self.matrix, self.reserved_matrix)
         self.matrix = self.add_mask(self.matrix, self.reserved_matrix, mask_id)
         self.matrix = self.add_format_string(self.matrix, mask_id)
-        #self.matrix = self.add_version_format(self.matrix)  # to do
-
-        return self.matrix
+        if int(self.version) >= 7:
+            self.matrix = self.add_version_format(self.matrix)
+        return self.matrix, mask_id
 
     def generateBinaryMatrix(self):
         bin_matrix = [[0 for col in range(self.size + 8)] for row in range(self.size + 8)]
