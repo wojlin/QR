@@ -147,6 +147,32 @@ class QRplacement():
 
         return local_matrix
 
+    '''def add_data_bits(self, local_matrix):
+        # white pixels for zero, black pixels for ones
+        converted_chars = []
+        for character in self.final_message:
+            if character == '1':
+                converted_chars.append(self.black_mark)
+            elif character == '0':
+                converted_chars.append(self.white_mark)
+
+        free_matrix = []
+
+        for x in range(self.size - 1, -1, -1):
+            local_line = []
+            for y in range(self.size - 1, -1, -1):
+                local_line.append([y, x])
+            if len(local_line) > 0:
+                free_matrix.append(local_line)
+
+        for column in free_matrix:
+            buffer = ' '
+            for element in column:
+                buffer += str(str(local_matrix[element[0]][element[1]]) + '  ')
+            print(buffer)
+
+        return local_matrix'''
+
     def add_data_bits(self, local_matrix):
         # white pixels for zero, black pixels for ones
         converted_chars = []
@@ -189,17 +215,6 @@ class QRplacement():
 
             zig_zag = []
 
-            '''for cell in range(max(line_len)):
-                try:
-                    print(f'{second_line[cell]}   {first_line[cell]}')
-                    if first_line[cell][0] == second_line[cell][0]:
-                        zig_zag.append(first_line[cell])
-                        zig_zag.append(second_line[cell])
-                    elif first_line[cell][0] < second_line[cell][0]:
-                        pass
-                except:
-                    pass'''
-
             second_addition = 0
             first_addition = 0
 
@@ -228,6 +243,8 @@ class QRplacement():
                             zig_zag.append(first_line[cell - second_addition])
                         except Exception:
                             pass
+
+                        zig_zag.append(second_line[cell])
 
                         zig_zag.append(second_line[cell])
 
@@ -565,6 +582,7 @@ class QRplacement():
         self.matrix = self.add_data_bits(self.matrix)  # !!!!!!!!!!! not working correctly
         mask_id = self.choose_mask(self.matrix, self.reserved_matrix)
         self.matrix = self.add_mask(self.matrix, self.reserved_matrix, mask_id)
+        self.matrix = self.add_timing_pattern(self.matrix)
         self.matrix = self.add_format_string(self.matrix, mask_id)
         if int(self.version) >= 7:
             self.matrix = self.add_version_format(self.matrix)

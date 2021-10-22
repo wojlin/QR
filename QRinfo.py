@@ -10,6 +10,7 @@ class QRinfo:
         self.error_correction = self.error_correction_check(correction_type)
         self.version, self.size = self.version_check()
         self.character_count_indicator = self.character_count_indicator_check()
+
     def getINF0(self):
         return self.mode_type, self.mode_indicator, self.error_correction, self.version, self.size, self.character_count_indicator
 
@@ -67,13 +68,13 @@ class QRinfo:
         versions_table_10_26 = [12, 11, 16, 10]
         versions_table_27_40 = [14, 13, 16, 12]
 
-        long = 0
         if 1 <= int(self.version) <= 9:
             long = versions_table_1_9[self.literate_assign(self.mode_type)]
         elif 10 <= int(self.version) <= 26:
             long = versions_table_10_26[self.literate_assign(self.mode_type)]
         elif 27 <= int(self.version) <= 40:
             long = versions_table_27_40[self.literate_assign(self.mode_type)]
-
+        else:
+            raise Exception(f"an unusual error was detected while selecting version for input: '{self.data}' and correction level: '{self.error_correction}'")
         return '%0*d' % (long, int(bin(len(self.data))[2:]))
 

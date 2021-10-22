@@ -38,33 +38,59 @@ class GenerateBMP():
         self.matrix_size = len(matrix)
         self._graphics = [(0, 0, 0, 0)] * self._bcWidth * self._bcHeight
 
-        self.writeData(matrix, scale, dpi, block_color, background_color)
+        self.writeData(matrix, scale, block_color, background_color)
         self.saveFile(filepath)
 
     @staticmethod
-    def checkInput(matrix, filepath, scale, dpi, block_color, background_color):
+    def checkInput(matrix, filepath, resolution, dpi, block_color, background_color):
+        """
+        this function returns an error if any of the parameters are invalid
+        :param matrix:             <2d list>  list with matrix
+        :param filepath:           <str>      path to file output
+        :param resolution:         <int>  >=  qr code matrix size
+        :param dpi:                <int>      (inches per meter)
+        :param block_color:        <tuple>    (r, g, b, a) <0-255>
+        :param background_color:   <tuple>    (r, g, b, a) <0-255>
+        :return: nothing
+        """
         if filepath[-4:] != '.bmp':
             raise Exception("file extension need to be .bmp")
-        if type(scale) != int or scale < 1:
-            raise TypeError("scale need to be positive integer")
-        if scale < len(matrix):
-            raise TypeError("resolution need to be higher or equal to qr code size")
+        if type(resolution) != int or resolution < 1:
+            raise Exception("scale need to be positive integer")
+        if resolution < len(matrix):
+            raise Exception("resolution need to be higher or equal to qr code size")
         if type(dpi) != int or dpi < 1:
-            raise TypeError("dpi need to be positive integer")
+            raise Exception("dpi need to be positive integer")
         if type(block_color) != tuple or type(background_color) != tuple:
-            raise TypeError("color must be (0,255,0-255,0-255,0-255) tuple if monochrome is set to False")
+            raise Exception("color must be (0,255,0-255,0-255,0-255) tuple")
         if len(block_color) != 4 or len(background_color) != 4:
-            raise TypeError("color must be (0,255, 0-255,0-255,0-255) tuple if monochrome is set to False")
+            raise Exception("color must be (0,255, 0-255,0-255,0-255) tuple")
         if (not 0 <= block_color[0] <= 255) or (not 0 <= block_color[1] <= 255) or (not 0 <= block_color[2] <= 255):
-            raise TypeError("color must be (0,255,0-255,0-255,0-255) tuple if monochrome is set to False")
+            raise Exception("color must be (0,255,0-255,0-255,0-255) tuple")
         if (not 0 <= background_color[0] <= 255) or (not 0 <= background_color[1] <= 255) or (
                 not 0 <= background_color[2] <= 255):
-            raise TypeError("color must be (0,255,0-255,0-255,0-255) tuple if monochrome is set to False")
+            raise Exception("color must be (0,255,0-255,0-255,0-255) tuple")
 
     def draw_pixel(self, x, y, color):
+        """
+        this function collects the corresponding pixel in the array
+        :param x: x coord of color array
+        :param y: y coord of color array
+        :param color: color of pixel in rgba format
+        :return: nothing
+        """
         self._graphics[(self._bcHeight - 1 - y) * self._bcHeight + x] = (color[2], color[1], color[0], color[3])
 
-    def writeData(self, matrix, scale, dpi, block_color, background_color):
+    def writeData(self, matrix, scale, block_color, background_color):
+        """
+        this function writes color data array for bmp file
+        :param matrix:             <2d list>  list with matrix
+        :param filepath:           <str>      path to file output
+        :param resolution:         <int>  >=  qr code matrix size
+        :param block_color:        <tuple>    (r, g, b, a) <0-255>
+        :param background_color:   <tuple>    (r, g, b, a) <0-255>
+        :return: nothing
+        """
         for y in range(len(matrix)):
             for x in range(len(matrix)):
                 if matrix[y][x] == 1:
@@ -77,7 +103,11 @@ class GenerateBMP():
                 self.draw_pixel(x * scale, y * scale, color)
 
     def saveFile(self, filepath):
-        # < = byte order little-endian H = unsigned short L = unsigned long
+        """
+        this function saves the collected data to a file specified in filepath parameter
+        :param filepath: path to file
+        :return: nothing
+        """
         with open(filepath, 'wb') as f:
             header = self._bfType.to_bytes(2, byteorder='little') + \
                      self._bfSize.to_bytes(4, byteorder='little') + \
